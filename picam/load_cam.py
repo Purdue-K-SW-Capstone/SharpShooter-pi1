@@ -46,7 +46,11 @@ class Cam:
 
         self.before = cv2.imread('../../before.jpg')
         self.after = self.frame
-    
+
+        # RGB to YCbCr
+        self.before = cv2.cvtColor(self.before, cv2.COLOR_BGR2YCR_CB)
+        self.after = cv2.cvtColor(self.after, cv2.COLOR_BGR2YCR_CB)
+
     def processing(self):
         
         coordinates = {}
