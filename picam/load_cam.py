@@ -29,11 +29,13 @@ class Cam:
             print("ret is False")
             exit()
         
+        # take an after picture
+        cv2.imwrite('../../after.jpg', self.frame)
         
         # if you want a photo to test, use this code.
         
         # print("write")
-        # cv2.imwrite('../../target.jpg', self.frame)
+        # cv2.imwrite('../../before.jpg', self.frame)
         # print("finish")
         
         # cv2.imshow('frame', self.frame)
@@ -42,7 +44,7 @@ class Cam:
         # exit()
 
 
-        self.before = cv2.imread('../../target.jpg')
+        self.before = cv2.imread('../../before.jpg')
         self.after = self.frame
     
     def processing(self):
@@ -75,6 +77,9 @@ class Cam:
 
         # image에 컨투어 그려줌
         contours_image = cv2.drawContours(subtracted, contours, -1, (0,255,0), 3)
+
+        # test 예제 사진
+        cv2.imwrite('../../ccontour.jpg', contours_image)
 
         # contour 좌표를  array로 추출
         contours_xy = np.array(contours)

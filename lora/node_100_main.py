@@ -50,8 +50,8 @@ class LoRa:
         
         print("tty setting...")
         
-        self.old_settings = termios.tcgetattr(sys.stdin)
-        tty.setcbreak(sys.stdin.fileno())
+        # self.old_settings = termios.tcgetattr(sys.stdin)
+        # tty.setcbreak(sys.stdin.fileno())
 
         print("node setting...")
         self.node = sx126x.sx126x(serial_num = self.serial_num, freq=self.freq, addr=self.addr, power=self.power, rssi=self.rssi)
@@ -75,13 +75,13 @@ class LoRa:
         
         self.node.send(package)
         print("------------sending finish-----------")
-        time.sleep(0.2)
+        # time.sleep(0.2)
         self.node.set(self.node.freq, self.node.addr_temp, self.node.power, self.node.rssi)
 
     def transmit(self, coordinates):
         
         try:
-            time.sleep(1)
+            # time.sleep(1)
             
             if coordinates:        
                 print("coordinates is here")            

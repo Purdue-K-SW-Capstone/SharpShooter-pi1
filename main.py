@@ -14,12 +14,17 @@ def main():
     while True:
         #when sound sensor detect the gun sound
         print("ready to capture")
+        
+        pre = time.time()
         cam.capture()
         print("------------capture-----------")
         coordinates = cam.processing()
         print("----------get coordinates---------")
         
         lora.transmit(coordinates)
+        aft = time.time()
+        
+        print(str(aft - pre) + " : seconds")
         print("Complete")
         
         time.sleep(10)
