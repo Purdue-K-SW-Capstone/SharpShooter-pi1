@@ -109,7 +109,17 @@ class Cam:
 
         return coordinates
 
+    def getImage(self):
+        
+        self.ret, self.frame = self.cap.read()
+        
+        if self.ret == False:
+            print("ret is False")
+            exit()
 
+        return self.frame
+    
+    
 
 # # open camera
 # cap = cv2.VideoCapture(0)#, cv2.CAP_V4L2)

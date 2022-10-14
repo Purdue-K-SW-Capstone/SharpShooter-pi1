@@ -23,6 +23,7 @@ import select
 import termios
 import tty
 from threading import Timer
+import cv2
 
 import json
 
@@ -38,6 +39,7 @@ class LoRa:
         
         self.serial_num = "/dev/ttyS0"
         self.freq = 915
+        # self.freq = 433
         # send to who
         self.addr = 100
         self.power = 22
@@ -94,6 +96,65 @@ class LoRa:
         except:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_settings)
 
+    def sendImage(self, image):
+        
+        print("Transmitting an Image start ...")
+        
+        if len(image) == 0:
+            print("Image is None")
+        
+        imageBytes = cv2.imencode('.jpg', image)[1].tobytes()
+        
+        print(imageBytes)
+                        
+        print("Creating package is completed")
+        
+        self.node.addr_temp = self.node.addr
+        self.node.set(self.node.freq, self.send_to_who, self.node.power, self.node.rssi)
+        
+        print("ready to send complete")
+        
+        # if len(package) > 230:
+            
+        while len(imageBytes) > 230:
+            self.node.send(str(imageBytes[:230]))
+            del imageBytes[:230]
+        
+        self.node.send(str(imageBytes))
+        print("------------sending finish-----------")
+        # time.sleep(0.2)
+        self.node.set(self.node.freq, self.node.addr_temp, self.node.power, self.node.rssi)
+
+        
+    def transmitImage(self, image):
+        if len(image) != 0:
+            print("Image is here")
+            self.sendImage(image)
+        
+    def sendTest(self, index):
+        
+        temp = {}
+        
+        start = time.time()
+        
+        temp['time'] = start
+        temp['count'] = index
+        
+        print("Transmitting start...")
+        
+        package = json.dumps(temp)
+
+        print("creating a package is completed")
+
+        self.node.addr_temp = self.node.addr
+        self.node.set(self.node.freq, self.send_to_who, self.node.power, self.node.rssi)
+        
+        print("ready to send complete")
+        
+        self.node.send(package)
+        print("------------sending finish-----------")
+        # time.sleep(0.2)
+        self.node.set(self.node.freq, self.node.addr_temp, self.node.power, self.node.rssi)
 
 
 # old_settings = termios.tcgetattr(sys.stdin)
