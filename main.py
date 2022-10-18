@@ -40,26 +40,23 @@ def mainImage():
     print("open the LoRa")
     lora = LoRa()
         
-    while True:        
-        #This code is for Transmitting Image
-        
-        print("ready to capture")
-        
-        pre = time.time()
-        print("------------capture-----------")
-        cam.capture()
-        print("----------get image---------")
-        image = cam.getImage()
-        
-        lora.transmitImage(image)
-        
-        aft = time.time()
-        
-        print(str(aft - pre) + " : seconds")
-        print("Complete")
-        
-        time.sleep(10)
-
+    #This code is for Transmitting Image
+    
+    print("ready to capture")
+    
+    # pre = time.time()
+    print("------------capture-----------")
+    cam.capture()
+    print("----------get image---------")
+    image = cam.getImage()
+    
+    lora.transmitImage(image)
+    
+    # aft = time.time()
+    
+    # print(str(aft - pre) + " : seconds")
+    print("Complete")
+    
     
     
 #This code is for Test
@@ -79,6 +76,6 @@ def mainTest():
     
     
 if __name__ == "__main__":
-    main()
-    # mainImage()
+    # main()
+    mainImage()
     # mainTest()

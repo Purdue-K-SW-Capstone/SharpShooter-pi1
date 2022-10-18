@@ -36,6 +36,8 @@ class LoRa:
     def __init__(self):
         
         print("property setting...")
+
+        self.packet_size = 238
         
         self.serial_num = "/dev/ttyS0"
         self.freq = 915
@@ -96,7 +98,64 @@ class LoRa:
         except:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_settings)
 
+
+    # For sending Image
     def sendImage(self, image):
+        
+        # package = []
+
+        print("Transmitting an Image start ...")
+        
+        if len(image) == 0:
+            print("Image is None")
+        
+        imageBytes = cv2.imencode('.jpg', image)[1].tobytes()
+        # print(imageBytes)
+        
+        # print("Creating package is completed")
+        
+        self.node.addr_temp = self.node.addr
+        self.node.set(self.node.freq, self.send_to_who, self.node.power, self.node.rssi)
+        
+        print("ready to send complete")
+
+        print("image size : " + str(len(imageBytes)/1024) + "KB")
+        
+        for i in range(int(len(imageBytes)/230) + 1):
+
+            package = []
+
+            if i == int(len(imageBytes)/230):
+                package.append(i)
+                package.append(imageBytes[i*230:len(imageBytes)])
+
+            package.append(i)
+
+            package.append(imageBytes[i*230:(i+1)*230])
+
+            # package = json.dumps(package)
+            package.append("}")
+
+            package = "".join(map(str, package))
+
+            print(package)
+
+            print(len(package))
+
+            self.node.send(package)
+            time.sleep(10)
+            # self.node.send(str(imageBytes[i*230:(i+1)*230]))
+            
+        # while len(imageBytes) > 230:
+        #     self.node.send(str(imageBytes[:230]))
+        #     del imageBytes[:230]
+        
+        # self.node.send(str(imageBytes))
+        print("------------sending finish-----------")
+        # time.sleep(0.2)
+        self.node.set(self.node.freq, self.node.addr_temp, self.node.power, self.node.rssi)
+
+    def sendImageTest(self, image):
         
         print("Transmitting an Image start ...")
         
@@ -105,32 +164,43 @@ class LoRa:
         
         imageBytes = cv2.imencode('.jpg', image)[1].tobytes()
         
-        print(imageBytes)
-                        
-        print("Creating package is completed")
-        
         self.node.addr_temp = self.node.addr
         self.node.set(self.node.freq, self.send_to_who, self.node.power, self.node.rssi)
         
         print("ready to send complete")
+
+        print("image size : " + str(len(imageBytes)/1024) + "KB")
+
+        for i in range(int(len(imageBytes)/self.packet_size) + 1):
+
+            if i != int(len(imageBytes)/self.packet_size):
+
+                print(imageBytes[i*self.packet_size:(i+1)*self.packet_size])
+                print(len(imageBytes[i*self.packet_size:(i+1)*self.packet_size]))
         
-        # if len(package) > 230:
-            
-        while len(imageBytes) > 230:
-            self.node.send(str(imageBytes[:230]))
-            del imageBytes[:230]
-        
-        self.node.send(str(imageBytes))
+                self.node.sendBytes(imageBytes[i*self.packet_size:(i+1)*self.packet_size])
+                print(i)
+                time.sleep(2)
+            else:
+                print(imageBytes[i*self.packet_size:-1])
+                print(len(imageBytes[i*self.packet_size:-1]))
+
+                self.node.sendBytes(imageBytes[i*self.packet_size:-1])
+                print(i)
+
         print("------------sending finish-----------")
         # time.sleep(0.2)
         self.node.set(self.node.freq, self.node.addr_temp, self.node.power, self.node.rssi)
 
         
+        
     def transmitImage(self, image):
         if len(image) != 0:
             print("Image is here")
-            self.sendImage(image)
-        
+            # self.sendImage(image)
+            self.sendImageTest(image)
+    
+    # This is for test
     def sendTest(self, index):
         
         temp = {}

@@ -244,6 +244,20 @@ class sx126x:
         # if self.rssi == True:
             # self.get_channel_rssi()
         time.sleep(0.1)
+        
+    def sendBytes(self, data):
+        GPIO.output(self.M1,GPIO.LOW)
+        GPIO.output(self.M0,GPIO.LOW)
+        time.sleep(0.1)
+        
+        # add the node address ,and the node of address is 65535 can konw who send messages
+        l_addr = self.addr_temp & 0xff
+        h_addr = self.addr_temp >> 8 & 0xff
+
+        self.ser.write(bytes([h_addr,l_addr])+data)
+        # if self.rssi == True:
+            # self.get_channel_rssi()
+        time.sleep(0.1)        
 
     def receive(self):
         if self.ser.inWaiting() > 0:
