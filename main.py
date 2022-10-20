@@ -2,7 +2,7 @@ from picam.load_cam import Cam
 from lora.node_100_main import LoRa
 import time
 
-# Seding coordinate code
+# Sending coordinate code
 def main():
     
     print("open the cam")
