@@ -26,6 +26,7 @@ from threading import Timer
 import cv2
 
 import json
+import struct
 
 
 class LoRa:
@@ -37,7 +38,10 @@ class LoRa:
         
         print("property setting...")
 
-        self.packet_size = 238
+        #The following should be 238 bytes in total.
+        #packet_size, timebytes
+        self.packet_size = 234
+        self.timebytes = 4
         
         self.serial_num = "/dev/ttyS0"
         self.freq = 915
@@ -173,12 +177,24 @@ class LoRa:
 
         for i in range(int(len(imageBytes)/self.packet_size) + 1):
 
+            print(time.time())
+            curTime = round(time.time() - 1640000000, 3)
+            print(curTime)
+            
+            # > is bigEndian
+            packet = struct.pack(">f", curTime)  #4bytes
+
+            c = struct.unpack(">f", packet)
+            print(c)
+
             if i != int(len(imageBytes)/self.packet_size):
 
                 print(imageBytes[i*self.packet_size:(i+1)*self.packet_size])
                 print(len(imageBytes[i*self.packet_size:(i+1)*self.packet_size]))
         
-                self.node.sendBytes(imageBytes[i*self.packet_size:(i+1)*self.packet_size])
+                packet = packet + imageBytes[i*self.packet_size:(i+1)*self.packet_size]
+        
+                self.node.sendBytes(packet)
                 print(i)
                 time.sleep(2)
             else:
