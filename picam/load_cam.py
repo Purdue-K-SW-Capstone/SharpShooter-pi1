@@ -48,8 +48,9 @@ class Cam:
         self.after = self.frame
 
         # RGB to YCbCr
-        self.before = cv2.cvtColor(self.before, cv2.COLOR_BGR2YCR_CB)
-        self.after = cv2.cvtColor(self.after, cv2.COLOR_BGR2YCR_CB)
+        self.before = cv2.cvtColor(self.before, cv2.COLOR_BGR2GRAY)
+        self.after = cv2.cvtColor(self.after, cv2.COLOR_BGR2GRAY)
+        cv2.imwrite('../../afterGray.jpg', self.after)
 
     def processing(self):
         
@@ -111,13 +112,13 @@ class Cam:
 
     def getImage(self):
         
-        self.ret, self.frame = self.cap.read()
+        # self.ret, self.frame = self.cap.read()
         
         if self.ret == False:
             print("ret is False")
             exit()
 
-        return self.frame
+        return self.after
     
     
 
