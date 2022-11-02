@@ -120,8 +120,7 @@ if __name__ == "__main__":
             print("-----coordinate is sent-----")
         
         if value.get("start") == 1:
-            print("-----target's image is sent-----")
-        
+            print("-----target's image is sent-----") 
         # if it is a gun sound, we take a picture and send the coordinate to pi2.
         # if value == Gunsound:
         # captureAndSendCoordinate(lora)

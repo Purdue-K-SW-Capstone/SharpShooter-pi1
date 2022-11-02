@@ -310,7 +310,6 @@ class LoRa:
         # get coordinate from Cam        
         coordinate = self.cam.capture()
         
-        print("coordinate")
         print(coordinate)
         
         temp = {}

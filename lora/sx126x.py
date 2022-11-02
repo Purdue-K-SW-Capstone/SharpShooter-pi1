@@ -4,10 +4,6 @@ import RPi.GPIO as GPIO
 import serial
 import time
 from .util import *
-import sys
-
-# test
-import json
 
 class sx126x:
 
@@ -309,14 +305,12 @@ class sx126x:
         l_addr = self.addr_temp & 0xff
         h_addr = self.addr_temp >> 8 & 0xff
         
-        # to communicate by half-duplex
-        self.ser.flushInput()
-
         self.ser.write(bytes([h_addr,l_addr])+payload.encode())
         # if self.rssi == True:
-            # self.get_channel_rssi()
-        time.sleep(0.5)
+        #     self.get_channel_rssi()
         
+        # to communicate by half-duplex
+        time.sleep(0.5)
 
     def get_channel_rssi(self):
         GPIO.output(self.M1,GPIO.LOW)
