@@ -52,6 +52,35 @@ class Cam:
         self.after = cv2.cvtColor(self.after, cv2.COLOR_BGR2GRAY)
         cv2.imwrite('../../afterGray.jpg', self.after)
 
+    def firstCapture(self):
+        
+        self.ret, self.frame = self.cap.read()
+        
+        if self.ret == False:
+            print("ret is False")
+            exit()
+        
+        # take a first capture
+        self.before = self.frame
+        
+    
+    def captureForCoordinate(self):
+        
+        self.ret, self.frame = self.cap.read()
+        
+        if self.ret == False:
+            print("ret is False")
+            exit()
+            
+        self.after = self.frame
+        
+        coordinate = self.processing()
+        
+        self.before = self.after
+    
+        return coordinate
+    
+
     def processing(self):
         
         coordinates = {}
@@ -84,7 +113,7 @@ class Cam:
         contours_image = cv2.drawContours(subtracted, contours, -1, (0,255,0), 3)
 
         # test 예제 사진
-        cv2.imwrite('../../ccontour.jpg', contours_image)
+        # cv2.imwrite('../../ccontour.jpg', contours_image)
 
         # contour 좌표를  array로 추출
         contours_xy = np.array(contours)
