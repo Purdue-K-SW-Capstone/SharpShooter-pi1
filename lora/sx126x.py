@@ -3,6 +3,11 @@
 import RPi.GPIO as GPIO
 import serial
 import time
+from .util import *
+import sys
+
+# test
+import json
 
 class sx126x:
 
@@ -250,7 +255,7 @@ class sx126x:
         GPIO.output(self.M0,GPIO.LOW)
         time.sleep(0.1)
         
-        # add the node address ,and the node of address is 65535 can konw who send messages
+        # add the node address ,and the node of address is 65535 can know who send messages
         l_addr = self.addr_temp & 0xff
         h_addr = self.addr_temp >> 8 & 0xff
 
@@ -259,23 +264,59 @@ class sx126x:
             # self.get_channel_rssi()
         time.sleep(0.1)        
 
+    # def receive(self):
+    #     if self.ser.inWaiting() > 0:
+    #         time.sleep(0.5)
+    #         r_buff = self.ser.read(self.ser.inWaiting())
+            
+    #         print("receive message from address\033[1;32m %d node \033[0m"%((r_buff[0]<<8)+r_buff[1]),end='\r\n',flush = True)
+    #         print("message is "+str(r_buff[2:-1]),end='\r\n')
+            
+    #         # print the rssi
+    #         if self.rssi:
+    #             # print('\x1b[3A',end='\r')
+    #             print("the packet rssi value: -{0}dBm".format(256-r_buff[-1:][0]))
+    #             self.get_channel_rssi()
+                
+    #         else:
+    #             pass
+    #             #print('\x1b[2A',end='\r')
+
     def receive(self):
         if self.ser.inWaiting() > 0:
             time.sleep(0.5)
             r_buff = self.ser.read(self.ser.inWaiting())
             
-            print("receive message from address\033[1;32m %d node \033[0m"%((r_buff[0]<<8)+r_buff[1]),end='\r\n',flush = True)
-            print("message is "+str(r_buff[2:-1]),end='\r\n')
+            # to remove the garbage value
+            processed = removeGarbageInJson(r_buff[2:])
             
-            # print the rssi
+            # print("message is "+str(r_buff[2:-1]),end='\r\n')
+
             if self.rssi:
-                # print('\x1b[3A',end='\r')
-                print("the packet rssi value: -{0}dBm".format(256-r_buff[-1:][0]))
+                print("the pakcet rssi value: -{0}dBm".format(256-r_buff[-1:][0]))
                 self.get_channel_rssi()
-                
             else:
                 pass
-                #print('\x1b[2A',end='\r')
+            
+            return processed
+        
+    def transmitCoordinate(self, payload):
+        GPIO.output(self.M1,GPIO.LOW)
+        GPIO.output(self.M0,GPIO.LOW)
+        time.sleep(0.1)
+        
+        # add the node address ,and the node of address is 65535 can konw who send messages
+        l_addr = self.addr_temp & 0xff
+        h_addr = self.addr_temp >> 8 & 0xff
+        
+        # to communicate by half-duplex
+        self.ser.flushInput()
+
+        self.ser.write(bytes([h_addr,l_addr])+payload.encode())
+        # if self.rssi == True:
+            # self.get_channel_rssi()
+        time.sleep(0.5)
+        
 
     def get_channel_rssi(self):
         GPIO.output(self.M1,GPIO.LOW)
