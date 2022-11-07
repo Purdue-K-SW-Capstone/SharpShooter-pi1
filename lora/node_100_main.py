@@ -241,52 +241,82 @@ class LoRa:
         # time.sleep(0.2)
         self.node.set(self.node.freq, self.node.addr_temp, self.node.power, self.node.rssi)
 
-    def sendImage(self, image):
+    # def sendImage(self, image):
         
-        print("Transmitting an Image start ...")
+    #     print("Transmitting an Image start ...")
         
-        imageBytes = cv2.imencode('.jpg', image)[1].tobytes()
+    #     imageBytes = cv2.imencode('.jpg', image)[1].tobytes()
         
+    #     self.node.addr_temp = self.node.addr
+    #     self.node.set(self.node.freq, self.send_to_who, self.node.power, self.node.rssi)
+        
+    #     print("ready to send complete")
+
+    #     print("image size : " + str(len(imageBytes)/1024) + "KB")
+
+    #     for i in range(int(len(imageBytes)/self.packet_size) + 1):
+
+    #         print(time.time())
+    #         curTime = round(time.time() - 1640000000, 3)
+    #         print(curTime)
+            
+    #         # > is bigEndian
+    #         packet = struct.pack(">f", curTime)  #4bytes
+
+    #         c = struct.unpack(">f", packet)
+    #         print(c)
+
+    #         if i != int(len(imageBytes)/self.packet_size):
+
+    #             print(imageBytes[i*self.packet_size:(i+1)*self.packet_size])
+    #             print(len(imageBytes[i*self.packet_size:(i+1)*self.packet_size]))
+        
+    #             packet = packet + imageBytes[i*self.packet_size:(i+1)*self.packet_size]
+        
+    #             self.node.sendBytes(packet)
+    #             print(i)
+    #             time.sleep(1)
+    #         else:
+    #             print(imageBytes[i*self.packet_size:-1])
+    #             print(len(imageBytes[i*self.packet_size:-1]))
+
+    #             self.node.sendBytes(imageBytes[i*self.packet_size:-1])
+    #             print(i)
+
+    #     print("------------sending finish-----------")
+    #     # time.sleep(0.2)
+    #     self.node.set(self.node.freq, self.node.addr_temp, self.node.power, self.node.rssi)
+        
+    def sendCoordinate(self):
+        
+        # get coordinate from Cam        
+        coordinate = self.cam.captureForCoordinate()
+        
+        print(coordinate)
+        
+        temp = {}
+        
+        start = time.time()
+        
+        temp['time'] = start
+        temp['coordinate'] = coordinate
+        
+        payload = json.dumps(temp)
+
+        print("dic")
+        print(payload)
         self.node.addr_temp = self.node.addr
         self.node.set(self.node.freq, self.send_to_who, self.node.power, self.node.rssi)
-        
-        print("ready to send complete")
 
-        print("image size : " + str(len(imageBytes)/1024) + "KB")
+        # send the payload        
+        self.node.transmitCoordinate(payload)        
 
-        for i in range(int(len(imageBytes)/self.packet_size) + 1):
-
-            print(time.time())
-            curTime = round(time.time() - 1640000000, 3)
-            print(curTime)
-            
-            # > is bigEndian
-            packet = struct.pack(">f", curTime)  #4bytes
-
-            c = struct.unpack(">f", packet)
-            print(c)
-
-            if i != int(len(imageBytes)/self.packet_size):
-
-                print(imageBytes[i*self.packet_size:(i+1)*self.packet_size])
-                print(len(imageBytes[i*self.packet_size:(i+1)*self.packet_size]))
-        
-                packet = packet + imageBytes[i*self.packet_size:(i+1)*self.packet_size]
-        
-                self.node.sendBytes(packet)
-                print(i)
-                time.sleep(1)
-            else:
-                print(imageBytes[i*self.packet_size:-1])
-                print(len(imageBytes[i*self.packet_size:-1]))
-
-                self.node.sendBytes(imageBytes[i*self.packet_size:-1])
-                print(i)
-
-        print("------------sending finish-----------")
-        # time.sleep(0.2)
         self.node.set(self.node.freq, self.node.addr_temp, self.node.power, self.node.rssi)
+
+    # def sendImage(self):
         
+        
+
 
     def getPacket(self):
         # can receive only
@@ -304,27 +334,3 @@ class LoRa:
             return result
         
         return {}
-    
-    def sendCoordinate(self):
-        
-        # get coordinate from Cam        
-        coordinate = self.cam.capture()
-        
-        print(coordinate)
-        
-        temp = {}
-        
-        start = time.time()
-        
-        temp['time'] = start
-        temp['coordinate'] = coordinate
-        
-        payload = json.dumps(temp)
-
-        self.node.addr_temp = self.node.addr
-        self.node.set(self.node.freq, self.send_to_who, self.node.power, self.node.rssi)
-
-        # send the payload        
-        self.node.transmitCoordinate(payload)        
-
-        self.node.set(self.node.freq, self.node.addr_temp, self.node.power, self.node.rssi)
