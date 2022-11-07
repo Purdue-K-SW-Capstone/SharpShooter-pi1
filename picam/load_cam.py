@@ -60,9 +60,13 @@ class Cam:
             print("ret is False")
             exit()
         
+        # turn the image into bytes
+        imageBytes = cv2.imencode('.jpg', self.frame)[1].tobytes()
+
         # take a first capture
         self.before = self.frame
         
+        return imageBytes
     
     def captureForCoordinate(self):
         
