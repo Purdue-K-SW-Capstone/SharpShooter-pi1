@@ -214,32 +214,32 @@ class LoRa:
             # self.sendImage(image)
             self.sendImageTest(image)
     
-    # This is for test
-    def sendCoordinate(self, index, coordinate):
+    # # This is for test
+    # def sendCoordinate(self, index, coordinate):
         
-        temp = {}
+    #     temp = {}
         
-        start = time.time()
+    #     start = time.time()
         
-        temp['time'] = start
-        temp['count'] = index
-        temp['coordinate'] = coordinate
+    #     temp['time'] = start
+    #     temp['count'] = index
+    #     temp['coordinate'] = coordinate
         
-        print("Transmitting start...")
+    #     print("Transmitting start...")
         
-        package = json.dumps(temp)
+    #     package = json.dumps(temp)
 
-        print("creating a package is completed")
+    #     print("creating a package is completed")
 
-        self.node.addr_temp = self.node.addr
-        self.node.set(self.node.freq, self.send_to_who, self.node.power, self.node.rssi)
+    #     self.node.addr_temp = self.node.addr
+    #     self.node.set(self.node.freq, self.send_to_who, self.node.power, self.node.rssi)
         
-        print("ready to send complete")
+    #     print("ready to send complete")
         
-        self.node.send(package)
-        print("------------sending finish-----------")
-        # time.sleep(0.2)
-        self.node.set(self.node.freq, self.node.addr_temp, self.node.power, self.node.rssi)
+    #     self.node.send(package)
+    #     print("------------sending finish-----------")
+    #     # time.sleep(0.2)
+    #     self.node.set(self.node.freq, self.node.addr_temp, self.node.power, self.node.rssi)
 
     # def sendImage(self, image):
         
@@ -291,32 +291,42 @@ class LoRa:
         
         # get coordinate from Cam        
         coordinate = self.cam.captureForCoordinate()
-        
-        print(coordinate)
-        
+                
         temp = {}
         
         start = time.time()
         
         temp['time'] = start
-        temp['coordinate'] = coordinate
         
+        if len(coordinate) != 0:
+            temp['x'] = coordinate['x']
+            temp['y'] = coordinate['y']
         payload = json.dumps(temp)
 
-        print("dic")
         print(payload)
         self.node.addr_temp = self.node.addr
         self.node.set(self.node.freq, self.send_to_who, self.node.power, self.node.rssi)
 
-        # send the payload        
+        # send the payload
         self.node.transmitCoordinate(payload)        
 
         self.node.set(self.node.freq, self.node.addr_temp, self.node.power, self.node.rssi)
 
-    # def sendImage(self):
+    def sendImage(self):
         
+        # get imageBytes from Cam
+        imageBytes = self.cam.firstCapture()
+ 
+        print("imgBytes")
+        print(imageBytes[:30])
+ 
+        self.node.addr_temp = self.node.addr
+        self.node.set(self.node.freq, self.send_to_who, self.node.power, self.node.rssi)
+       
+        # send the imageBytes
+        self.node.transmitImageBytes(imageBytes)
         
-
+        self.node.set(self.node.freq, self.node.addr_temp, self.node.power, self.node.rssi)
 
     def getPacket(self):
         # can receive only

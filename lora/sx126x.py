@@ -277,6 +277,38 @@ class sx126x:
     #         else:
     #             pass
     #             #print('\x1b[2A',end='\r')
+        
+    def transmitCoordinate(self, payload):
+        GPIO.output(self.M1,GPIO.LOW)
+        GPIO.output(self.M0,GPIO.LOW)
+        time.sleep(0.1)
+        
+        # add the node address ,and the node of address is 65535 can konw who send messages
+        l_addr = self.addr_temp & 0xff
+        h_addr = self.addr_temp >> 8 & 0xff
+        
+        self.ser.write(bytes([h_addr,l_addr])+payload.encode())
+        # if self.rssi == True:
+        #     self.get_channel_rssi()
+        
+        # to communicate by half-duplex
+        time.sleep(0.5)
+
+    def transmitImageBytes(self, imageBytes):
+        GPIO.output(self.M1,GPIO.LOW)
+        GPIO.output(self.M0,GPIO.LOW)
+        time.sleep(0.1)
+        
+        # add the node address ,and the node of address is 65535 can konw who send messages
+        l_addr = self.addr_temp & 0xff
+        h_addr = self.addr_temp >> 8 & 0xff
+        
+        self.ser.write(bytes([h_addr,l_addr])+imageBytes)
+        # if self.rssi == True:
+        #     self.get_channel_rssi()
+        
+        # to communicate by half-duplex
+        time.sleep(0.5)
 
     def receive(self):
         if self.ser.inWaiting() > 0:
@@ -295,22 +327,6 @@ class sx126x:
                 pass
             
             return processed
-        
-    def transmitCoordinate(self, payload):
-        GPIO.output(self.M1,GPIO.LOW)
-        GPIO.output(self.M0,GPIO.LOW)
-        time.sleep(0.1)
-        
-        # add the node address ,and the node of address is 65535 can konw who send messages
-        l_addr = self.addr_temp & 0xff
-        h_addr = self.addr_temp >> 8 & 0xff
-        
-        self.ser.write(bytes([h_addr,l_addr])+payload.encode())
-        # if self.rssi == True:
-        #     self.get_channel_rssi()
-        
-        # to communicate by half-duplex
-        time.sleep(0.5)
 
     def get_channel_rssi(self):
         GPIO.output(self.M1,GPIO.LOW)
