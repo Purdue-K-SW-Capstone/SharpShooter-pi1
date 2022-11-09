@@ -315,11 +315,19 @@ class LoRa:
     def sendImage(self):
         
         # get imageBytes from Cam
+        # imageBytes = self.cam.firstCapture()
+        
+        # for test
+        # image = cv2.imread('./lora/test.jpg')
+        # imageBytes = cv2.imencode('.jpg', image)[1].tobytes()
+ 
         imageBytes = self.cam.firstCapture()
- 
-        print("imgBytes")
-        print(imageBytes[:30])
- 
+    
+        print("imageBytes")
+        print(imageBytes)
+        print(str(len(imageBytes)/1024) + "KB")
+        print("------------------")
+    
         self.node.addr_temp = self.node.addr
         self.node.set(self.node.freq, self.send_to_who, self.node.power, self.node.rssi)
        

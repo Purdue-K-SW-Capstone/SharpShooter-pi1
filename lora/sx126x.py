@@ -51,6 +51,8 @@ class sx126x:
     SX126X_Power_10dBm = 0x03
 
     def __init__(self,serial_num,freq,addr,power,rssi):
+        self.PACKET_SIZE = 240
+        
         self.rssi = rssi
         self.addr = addr
         self.freq = freq
@@ -299,11 +301,36 @@ class sx126x:
         GPIO.output(self.M0,GPIO.LOW)
         time.sleep(0.1)
         
-        # add the node address ,and the node of address is 65535 can konw who send messages
-        l_addr = self.addr_temp & 0xff
-        h_addr = self.addr_temp >> 8 & 0xff
+        # turn integer value to byte of 4 byte type using big endian
+        imageLengthBytes = len(imageBytes).to_bytes(4, 'big')
         
-        self.ser.write(bytes([h_addr,l_addr])+imageBytes)
+        # send first packet
+        self.ser.write(imageLengthBytes + imageBytes[:self.PACKET_SIZE-4])
+        
+        print("first")
+        print(imageBytes[:self.PACKET_SIZE-4])
+        print("-------------")
+        
+        for i in range(self.PACKET_SIZE-4, len(imageBytes), self.PACKET_SIZE):
+            time.sleep(2.5)
+            
+            # for the last packet
+            if i >= len(imageBytes) - self.PACKET_SIZE:
+                self.ser.write(imageBytes[i:])
+                print(imageBytes[i:])
+                print(str(i+len(imageBytes[i:])) + " / " + str(len(imageBytes)))
+                print("here")
+                print()
+                time.sleep(2.5)
+                
+                # send bytes(0) to remove garbage value
+                self.ser.write(bytes(0))
+                break;
+        
+            self.ser.write(imageBytes[i:i+self.PACKET_SIZE])
+            print(imageBytes[i:i+self.PACKET_SIZE])
+            print(str(i+self.PACKET_SIZE) + " / " + str(len(imageBytes)))
+        
         # if self.rssi == True:
         #     self.get_channel_rssi()
         
@@ -314,9 +341,9 @@ class sx126x:
         if self.ser.inWaiting() > 0:
             time.sleep(0.5)
             r_buff = self.ser.read(self.ser.inWaiting())
-            
+            print(r_buff)
             # to remove the garbage value
-            processed = removeGarbageInJson(r_buff[2:])
+            processed = removeGarbageInJson(r_buff[:])
             
             # print("message is "+str(r_buff[2:-1]),end='\r\n')
 
