@@ -347,7 +347,7 @@ class LoRa:
         
         if processed != None:
             result = json.loads(processed)
-            print(result)
+            # print(result)
             
             return result
         

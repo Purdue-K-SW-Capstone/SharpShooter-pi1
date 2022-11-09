@@ -107,27 +107,28 @@ if __name__ == "__main__":
     print("LoRa is opened")
     
     # for test
-    # imageBytes = cam.firstCapture()
+    imageBytes = cam.firstCapture()
+    # lora.sendImage()
     
-    lora.sendImage()
-    # while True:
+    
+    while True:
         # 방법 1. receive 로직에 총소리, tablet start버튼을 받는 로직을 둘 다 넣어 놓는다.
         # 방법 2. 그냥 main함수 while문에서 receiveSoundValue함수와 receiveStartBtn함수를 실시간으로 실행시킨다.
         # as I see, The way 1 is better than way 2
         
         # receiving the sound value(True or False) constantly
 
-        # lora.sendCoordinate()
-
-        # value = lora.getPacket()
+        value = lora.getPacket()
         
-        # if value.get("sound") == 1:
-        #     lora.sendCoordinate()
-        #     print("-----coordinate is sent-----")
+        if value.get("sound") == 1:
+            print(value)
+            lora.sendCoordinate()
+            print("-----coordinate is sent-----")
         
-        # if value.get("start") == 1:
-        #     lora.sendImage()
-        #     print("-----target's image is sent-----") 
+        if value.get("start") == 1:
+            print(value)
+            lora.sendImage()
+            print("-----target's image is sent-----") 
 
         # if it is a gun sound, we take a picture and send the coordinate to pi2.
         # if value == Gunsound:
