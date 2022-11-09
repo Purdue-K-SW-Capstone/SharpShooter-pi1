@@ -7,6 +7,8 @@ class Cam:
         cap, ret, frame, before, after
     """
     
+    # sel.befer, self.after 에는 grayscale이고, background가 제거된 이미지만 넣도록 한다.
+    
     def __init__(self):
         self.CAM_WIDTH = 720
         self.CAM_HEIGHT = 1280
@@ -56,6 +58,8 @@ class Cam:
         
         self.ret, self.frame = self.cap.read()
         
+        self.frame = self.removeBackGround(self.frame)
+        
         if self.ret == False:
             print("ret is False")
             exit()
@@ -71,6 +75,8 @@ class Cam:
     def captureForCoordinate(self):
         
         self.ret, self.frame = self.cap.read()
+        
+        self.frame = self.removeBackGround(self.frame)
         
         if self.ret == False:
             print("ret is False")
@@ -142,6 +148,84 @@ class Cam:
             coordinates[f"{i}"] = f"({x}, {y})"
 
         return coordinates
+
+    def removeBackGround(self, image):
+
+        copy = image.copy()
+        
+        # turn image from RGB to YCBCR (brightness)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2YCR_CB)
+        
+        # Denoise by Gaussian Blur
+        gray = cv2.GaussianBlur(gray, (3,3), 0)
+        
+        # Canny Edge Detection
+        edged = cv2.Canny(gray.copy(), 150, 255)
+        
+        # find a closed curve
+        cnts, _ = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # draw a contours
+        cv2.drawContours(copy, cnts, -1, (0, 255, 0))
+        
+        # After finding a contour, sort the square picture in order of large area
+        cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:5]
+        
+        for c in cnts:
+            # simplify approximate contour from largest area    
+            peri = cv2.arcLength(c, True)   # circumferential length
+            
+            # Approximate to 0.02 approximation of perimeter length
+            vertices = cv2.approxPolyDP(c, 0.02 * peri, True)
+
+            # Stop with 4 approximate vertices
+            if len(vertices) == 4:
+                break
+            
+        # change vertex to 4 by 2
+        if vertices.shape[0] == 4:
+            pts = vertices.reshape(4,2)
+            
+        # mark a green circle at a coordinate
+        for x, y in pts:
+            cv2.circle(copy, (x, y), 5, (0, 255, 0), -1)
+            
+        # find a center of coordinates
+        alpha = 10
+        center = (image.shape[0] // 2, image.shape[1] // 2)
+        pts = pts[np.argsort([np.arctan2(p[0] - center[0] // alpha, p[1] + center[1]) for p in pts])]
+
+        # coordinate of target's vertexes
+        topLeft = pts[1]
+        bottomRight = pts[2]
+        topRight = pts[3]
+        bottomLeft = pts[0]
+
+        # 4 coordinates before conversion
+        pts1 = np.float32([topLeft, topRight, bottomRight, bottomLeft])
+
+        # calculate the width and height for the post-conversion image
+        w1 = abs(bottomRight[0] - bottomLeft[0]) # top width
+        w2 = abs(topRight[0] - topLeft[0]) # bottom width
+        h1 = abs(topRight[1] - bottomRight[1]) # right height
+        h2 = abs(topLeft[1] - bottomLeft[1]) # left height
+        width = max([w1,w2]) # total width
+        height = max([h1,h2]) # total height
+        
+        # 4 coordinates after conversion
+        pts2 = np.float32([[0,0],[width-1,0],[width-1,height-1],[0,height-1]])
+
+        # calculate the transformation Matrix
+        mtrx = cv2.getPerspectiveTransform(pts1, pts2)
+
+        # apply the Perspective transformation
+        result = cv2.warpPerspective(image, mtrx, (width, height))
+        
+        result = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+        
+        return result
+        
+        
 
     def getImage(self):
         
