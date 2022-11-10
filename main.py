@@ -107,7 +107,7 @@ if __name__ == "__main__":
     print("LoRa is opened")
     
     # for test
-    imageBytes = cam.firstCapture()
+    # imageBytes = cam.firstCapture()
     # lora.sendImage()
     
     

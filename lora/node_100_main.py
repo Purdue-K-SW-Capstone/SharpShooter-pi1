@@ -291,16 +291,18 @@ class LoRa:
         
         # get coordinate from Cam        
         coordinate = self.cam.captureForCoordinate()
-                
+        
         temp = {}
         
-        start = time.time()
+        # start = time.time()
         
-        temp['time'] = start
+        # temp['time'] = start
         
         if len(coordinate) != 0:
-            temp['x'] = coordinate['x']
-            temp['y'] = coordinate['y']
+            xyCoordinate = [coordinate['x'], coordinate['y']]
+            temp['coordinate'] = xyCoordinate
+            # temp['x'] = coordinate['x']
+            # temp['y'] = coordinate['y']
         payload = json.dumps(temp)
 
         print(payload)

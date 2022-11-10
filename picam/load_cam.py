@@ -23,42 +23,46 @@ class Cam:
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.CAM_WIDTH)
         # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.CAM_HEIGHT)
 
-    def capture(self):
+    # def capture(self):
         
-        self.ret, self.frame = self.cap.read()
+    #     self.ret, self.frame = self.cap.read()
         
-        if self.ret == False:
-            print("ret is False")
-            exit()
+    #     if self.ret == False:
+    #         print("ret is False")
+    #         exit()
         
-        # take an after picture
-        cv2.imwrite('../../after.jpg', self.frame)
+    #     # take an after picture
+    #     cv2.imwrite('../../after.jpg', self.frame)
         
-        # if you want a photo to test, use this code.
+    #     # if you want a photo to test, use this code.
         
-        # print("write")
-        # cv2.imwrite('../../before.jpg', self.frame)
-        # print("finish")
+    #     # print("write")
+    #     # cv2.imwrite('../../before.jpg', self.frame)
+    #     # print("finish")
         
-        # cv2.imshow('frame', self.frame)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
-        # exit()
+    #     # cv2.imshow('frame', self.frame)
+    #     # cv2.waitKey(0)
+    #     # cv2.destroyAllWindows()
+    #     # exit()
 
 
-        self.before = cv2.imread('../../before.jpg')
-        self.after = self.frame
+    #     self.before = cv2.imread('../../before.jpg')
+    #     self.after = self.frame
 
-        # RGB to YCbCr
-        self.before = cv2.cvtColor(self.before, cv2.COLOR_BGR2GRAY)
-        self.after = cv2.cvtColor(self.after, cv2.COLOR_BGR2GRAY)
-        cv2.imwrite('../../afterGray.jpg', self.after)
+    #     # RGB to YCbCr
+    #     self.before = cv2.cvtColor(self.before, cv2.COLOR_BGR2GRAY)
+    #     self.after = cv2.cvtColor(self.after, cv2.COLOR_BGR2GRAY)
+    #     cv2.imwrite('../../afterGray.jpg', self.after)
 
     def firstCapture(self):
         
         self.ret, self.frame = self.cap.read()
         
+        cv2.imwrite('/home/ksw-user/first.jpg', self.frame)
+        
         self.frame = self.removeBackGround(self.frame)
+        
+        cv2.imwrite('/home/ksw-user/remove_first.jpg', self.frame)
         
         if self.ret == False:
             print("ret is False")
@@ -70,24 +74,30 @@ class Cam:
         # take a first capture
         self.before = self.frame
         
+        self.cap.release()
+                
         return imageBytes
     
     def captureForCoordinate(self):
         
+        self.cap = cv2.VideoCapture(0)
+        
         self.ret, self.frame = self.cap.read()
         
-        self.frame = self.removeBackGround(self.frame)
+        cv2.imwrite('/home/ksw-user/coordinate.jpg', self.frame)
+        
+        self.after = self.removeBackGround(self.frame)
         
         if self.ret == False:
             print("ret is False")
             exit()
-            
-        self.after = self.frame
-        
+                    
         coordinate = self.processing()
         
         self.before = self.after
-    
+            
+        self.cap.release()
+            
         return coordinate
     
 
@@ -99,7 +109,9 @@ class Cam:
         
         # if self.after == None:
             # print("Didn't take a picture")
-          
+        cv2.imwrite("/home/ksw-user/before.jpg", self.before)
+        cv2.imwrite("/home/ksw-user/after.jpg", self.after)
+        
         # subtract the images
         subtracted = cv2.subtract(self.before, self.after)
     
@@ -123,7 +135,7 @@ class Cam:
         contours_image = cv2.drawContours(subtracted, contours, -1, (0,255,0), 3)
 
         # test 예제 사진
-        # cv2.imwrite('../../ccontour.jpg', contours_image)
+        cv2.imwrite('/home/ksw-user/contour.jpg', contours_image)
 
         # contour 좌표를  array로 추출
         contours_xy = np.array(contours)
