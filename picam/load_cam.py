@@ -60,6 +60,9 @@ class Cam:
         
         cv2.imwrite('/home/ksw-user/first.jpg', self.frame)
         
+        # take a first capture
+        self.before = self.frame
+        
         self.frame = self.removeBackGround(self.frame)
         
         cv2.imwrite('/home/ksw-user/remove_first.jpg', self.frame)
@@ -71,8 +74,6 @@ class Cam:
         # turn the image into bytes
         imageBytes = cv2.imencode('.jpg', self.frame)[1].tobytes()
 
-        # take a first capture
-        self.before = self.frame
         
         self.cap.release()
                 
@@ -86,7 +87,9 @@ class Cam:
         
         cv2.imwrite('/home/ksw-user/coordinate.jpg', self.frame)
         
-        self.after = self.removeBackGround(self.frame)
+        self.after = self.frame
+        
+        # self.frame = self.removeBackGround(self.frame)
         
         if self.ret == False:
             print("ret is False")
@@ -104,8 +107,11 @@ class Cam:
     def processing(self):
         
         coordinates = {}
-
+        
         # total = 0
+        
+        # self.before = cv2.cvtColor(self.before, cv2.COLOR_BGR2YCR_CB)
+        # self.after = cv2.cvtColor(self.after, cv2.COLOR_BGR2YCR_CB)
         
         # if self.after == None:
             # print("Didn't take a picture")
@@ -157,9 +163,19 @@ class Cam:
             #contours_image[y, x] = [255,0,0]
             contours_image[y, x] = [128,128,5]
             
-            coordinates[f"{i}"] = f"({x}, {y})"
+            coordinates[f"{i}"] = [x, y]
+            
+        if "0" in coordinates:
+            perspect_x = round((self.mtrx[0][0]* coordinates["0"][0]+self.mtrx[0][1]* coordinates["0"][1]+self.mtrx[0][2])/(self.mtrx[2][0]* coordinates["0"][0]+self.mtrx[2][1]* coordinates["0"][1]+self.mtrx[2][2]))
+            perspect_y = round((self.mtrx[1][0]* coordinates["0"][0]+self.mtrx[1][1]* coordinates["0"][1]+self.mtrx[1][2])/(self.mtrx[2][0]* coordinates["0"][0]+self.mtrx[2][1]* coordinates["0"][1]+self.mtrx[2][2]))
 
-        return coordinates
+            coordinates["0"] = [perspect_x, perspect_y]
+        
+            print(coordinates["0"])
+
+            return coordinates["0"]
+        else:
+            return []
 
     def removeBackGround(self, image):
 
@@ -228,10 +244,10 @@ class Cam:
         pts2 = np.float32([[0,0],[width-1,0],[width-1,height-1],[0,height-1]])
 
         # calculate the transformation Matrix
-        mtrx = cv2.getPerspectiveTransform(pts1, pts2)
+        self.mtrx = cv2.getPerspectiveTransform(pts1, pts2)
 
         # apply the Perspective transformation
-        result = cv2.warpPerspective(image, mtrx, (width, height))
+        result = cv2.warpPerspective(image, self.mtrx, (width, height))
         
         result = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
         

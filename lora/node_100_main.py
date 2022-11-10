@@ -291,7 +291,7 @@ class LoRa:
         
         # get coordinate from Cam        
         coordinate = self.cam.captureForCoordinate()
-        
+        print(coordinate)
         temp = {}
         
         # start = time.time()
@@ -299,7 +299,7 @@ class LoRa:
         # temp['time'] = start
         
         if len(coordinate) != 0:
-            xyCoordinate = [coordinate['x'], coordinate['y']]
+            xyCoordinate = [coordinate[0], coordinate[1]]
             temp['coordinate'] = xyCoordinate
             # temp['x'] = coordinate['x']
             # temp['y'] = coordinate['y']
