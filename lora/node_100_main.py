@@ -299,8 +299,8 @@ class LoRa:
         # temp['time'] = start
         
         if len(coordinate) != 0:
-            xyCoordinate = [coordinate[0], coordinate[1]]
-            temp['coordinate'] = xyCoordinate
+            # xyCoordinate = [coordinate[0], coordinate[1]]
+            temp['coordinate'] = coordinate
             # temp['x'] = coordinate['x']
             # temp['y'] = coordinate['y']
         payload = json.dumps(temp)

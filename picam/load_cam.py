@@ -106,12 +106,12 @@ class Cam:
 
     def processing(self):
         
-        coordinates = {}
+        coordinates = []
         
         # total = 0
         
-        # self.before = cv2.cvtColor(self.before, cv2.COLOR_BGR2YCR_CB)
-        # self.after = cv2.cvtColor(self.after, cv2.COLOR_BGR2YCR_CB)
+        # self.before = cv2.cvtColor(self.before, cv2.COLOR_BGR2GRAY)
+        # self.after = cv2.cvtColor(self.after, cv2.COLOR_BGR2GRAY)
         
         # if self.after == None:
             # print("Didn't take a picture")
@@ -152,28 +152,37 @@ class Cam:
             contours_mean = np.mean(contours[i], axis = 0)
             contour_center.append(contours_mean)
 
+        # print("minX : " + str(self.minX))
+        # print("maxX : " + str(self.maxX))
+        # print("minY : " + str(self.minY))
+        # print("maxY : " + str(self.maxY))
+
         # 모든 중심좌표를 list에 넣고, 이미지에 중심 좌표 표시하게 함
         for i in range(len(contour_center)):
             temp = contour_center[i][0]
             temp = temp.tolist()
             x = int(temp[0])
             y = int(temp[1])
-            # print(temp)
-            # print(temp[0])
-            #contours_image[y, x] = [255,0,0]
-            contours_image[y, x] = [128,128,5]
             
-            coordinates[f"{i}"] = [x, y]
+            if (self.minX <= x) and (x <= self.maxX) and (self.minY <= y) and (y <= self.maxY):
+                contours_image[y, x] = [128,128,5]
+                coordinates.append(x)
+                coordinates.append(y)
+                # print(str(x) + ", " + str(y))
             
-        if "0" in coordinates:
-            perspect_x = round((self.mtrx[0][0]* coordinates["0"][0]+self.mtrx[0][1]* coordinates["0"][1]+self.mtrx[0][2])/(self.mtrx[2][0]* coordinates["0"][0]+self.mtrx[2][1]* coordinates["0"][1]+self.mtrx[2][2]))
-            perspect_y = round((self.mtrx[1][0]* coordinates["0"][0]+self.mtrx[1][1]* coordinates["0"][1]+self.mtrx[1][2])/(self.mtrx[2][0]* coordinates["0"][0]+self.mtrx[2][1]* coordinates["0"][1]+self.mtrx[2][2]))
-
-            coordinates["0"] = [perspect_x, perspect_y]
+            
+            # coordinates[f"{i}"] = [x, y]
         
-            print(coordinates["0"])
+        # print(coordinates)
+        if len(coordinates) != 0:
+            perspect_x = round((self.mtrx[0][0]* coordinates[0]+self.mtrx[0][1]* coordinates[1]+self.mtrx[0][2])/(self.mtrx[2][0]* coordinates[0]+self.mtrx[2][1]* coordinates[1]+self.mtrx[2][2]))
+            perspect_y = round((self.mtrx[1][0]* coordinates[0]+self.mtrx[1][1]* coordinates[1]+self.mtrx[1][2])/(self.mtrx[2][0]* coordinates[0]+self.mtrx[2][1]* coordinates[1]+self.mtrx[2][2]))
 
-            return coordinates["0"]
+            coordinates = [perspect_x, perspect_y]
+        
+            print(coordinates)
+
+            return coordinates
         else:
             return []
 
@@ -184,18 +193,24 @@ class Cam:
         # turn image from RGB to YCBCR (brightness)
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2YCR_CB)
         
+        cv2.imwrite("/home/ksw-user/gray.jpg", gray)
+        
         # Denoise by Gaussian Blur
         gray = cv2.GaussianBlur(gray, (3,3), 0)
+        
+        cv2.imwrite("/home/ksw-user/gaussian.jpg", gray)
         
         # Canny Edge Detection
         edged = cv2.Canny(gray.copy(), 150, 255)
         
+        cv2.imwrite("/home/ksw-user/canny.jpg", edged)
+        
         # find a closed curve
         cnts, _ = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
+                
         # draw a contours
         cv2.drawContours(copy, cnts, -1, (0, 255, 0))
-        
+                
         # After finding a contour, sort the square picture in order of large area
         cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:5]
         
@@ -224,19 +239,27 @@ class Cam:
         pts = pts[np.argsort([np.arctan2(p[0] - center[0] // alpha, p[1] + center[1]) for p in pts])]
 
         # coordinate of target's vertexes
-        topLeft = pts[1]
-        bottomRight = pts[2]
-        topRight = pts[3]
-        bottomLeft = pts[0]
+        self.topLeft = pts[1]
+        self.bottomRight = pts[2]
+        self.topRight = pts[3]
+        self.bottomLeft = pts[0]
+        
+        # find min x, y and max x, y
+        self.minX = min(self.topLeft[0], self.bottomLeft[0])
+        self.maxX = max(self.topRight[0], self.bottomRight[0])
+
+        self.minY = min(self.topLeft[1], self.topRight[1])
+        self.maxY = max(self.bottomLeft[1], self.bottomRight[1])        
+
 
         # 4 coordinates before conversion
-        pts1 = np.float32([topLeft, topRight, bottomRight, bottomLeft])
+        pts1 = np.float32([self.topLeft, self.topRight, self.bottomRight, self.bottomLeft])
 
         # calculate the width and height for the post-conversion image
-        w1 = abs(bottomRight[0] - bottomLeft[0]) # top width
-        w2 = abs(topRight[0] - topLeft[0]) # bottom width
-        h1 = abs(topRight[1] - bottomRight[1]) # right height
-        h2 = abs(topLeft[1] - bottomLeft[1]) # left height
+        w1 = abs(self.bottomRight[0] - self.bottomLeft[0]) # top width
+        w2 = abs(self.topRight[0] - self.topLeft[0]) # bottom width
+        h1 = abs(self.topRight[1] - self.bottomRight[1]) # right height
+        h2 = abs(self.topLeft[1] - self.bottomLeft[1]) # left height
         width = max([w1,w2]) # total width
         height = max([h1,h2]) # total height
         
