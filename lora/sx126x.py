@@ -51,7 +51,7 @@ class sx126x:
     SX126X_Power_10dBm = 0x03
 
     def __init__(self,serial_num,freq,addr,power,rssi):
-        self.PACKET_SIZE = 240
+        self.PACKET_SIZE = 190
         
         self.rssi = rssi
         self.addr = addr

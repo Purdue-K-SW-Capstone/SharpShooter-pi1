@@ -62,8 +62,17 @@ class Cam:
         
         # take a first capture
         self.before = self.frame
+        # self.img = self.homomorphic_filtering(self.frame, 0.5, 15.0, 25)#, True)
+
+        #self.img = self.homomorphic_filtering(self.frame, .9, 3.5,3)#, True)
+        # cv2.imwrite('/home/ksw-user/morphic.jpg', self.img)
+        # self.edged = self.edge_detection(self.img)
+        # self.frame = self.preprocess(self.frame, self.edged)
+        # cv2.imwrite('/home/ksw-user/edged.jpg', self.edged)
         
         self.frame = self.removeBackGround(self.frame)
+        
+        height, width = self.frame.shape
         
         cv2.imwrite('/home/ksw-user/remove_first.jpg', self.frame)
         
@@ -74,13 +83,15 @@ class Cam:
         # turn the image into bytes
         imageBytes = cv2.imencode('.jpg', self.frame)[1].tobytes()
 
+        cv2.imwrite('/home/ksw-user/send_image.jpg', self.frame)
         
+        print("firstCapture")
         self.cap.release()
                 
-        return imageBytes
+        return [imageBytes, width, height]
     
     def captureForCoordinate(self):
-        
+                
         self.cap = cv2.VideoCapture(0)
         
         self.ret, self.frame = self.cap.read()
@@ -98,9 +109,9 @@ class Cam:
         coordinate = self.processing()
         
         self.before = self.after
-            
+                        
         self.cap.release()
-            
+                        
         return coordinate
     
 
@@ -191,7 +202,8 @@ class Cam:
         copy = image.copy()
         
         # turn image from RGB to YCBCR (brightness)
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2YCR_CB)
+        # gray = cv2.cvtColor(image, cv2.COLOR_BGR2YCR_CB)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  # modified
         
         cv2.imwrite("/home/ksw-user/gray.jpg", gray)
         
@@ -200,9 +212,12 @@ class Cam:
         
         cv2.imwrite("/home/ksw-user/gaussian.jpg", gray)
         
-        # Canny Edge Detection
-        edged = cv2.Canny(gray.copy(), 150, 255)
+        ret, thresh1 = cv2.threshold(gray, 0, 255, cv2.THRESH_OTSU)
         
+        # Canny Edge Detection
+        # edged = cv2.Canny(gray.copy(), 150, 255)
+        edged = cv2.Canny(gray.copy(), 0, ret)
+                        
         cv2.imwrite("/home/ksw-user/canny.jpg", edged)
         
         # find a closed curve
@@ -239,10 +254,13 @@ class Cam:
         pts = pts[np.argsort([np.arctan2(p[0] - center[0] // alpha, p[1] + center[1]) for p in pts])]
 
         # coordinate of target's vertexes
-        self.topLeft = pts[1]
-        self.bottomRight = pts[2]
-        self.topRight = pts[3]
-        self.bottomLeft = pts[0]
+        sm = pts.sum(axis = 1)
+        diff = np.diff(pts, axis = 1)
+        
+        self.topLeft = pts[np.argmin(sm)]
+        self.bottomRight = pts[np.argmax(sm)]
+        self.topRight = pts[np.argmin(diff)]
+        self.bottomLeft = pts[np.argmax(diff)]
         
         # find min x, y and max x, y
         self.minX = min(self.topLeft[0], self.bottomLeft[0])
@@ -563,6 +581,143 @@ class Cam:
 
 # # In[ ]:
 
+    def homomorphic_filtering(self, image, gamma1, gamma2, power, white = False):
+        img = image.copy()
+        
+        # RGB이미지를 YUV로 변환
+        # RGB to YUV conversion
+        img_YUV = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)    
+        y = img_YUV[:,:,0]    
+
+        rows, cols = y.shape[0], y.shape[1]
+
+        ### illumination, reflectance elements(조명, 반사 요소)를 분리하기 위해 log를 취함
+        ### log operation to seperate illumination and reflection elements
+
+        imgLog = np.log1p(np.array(y, dtype='float') / 255) # y값을 0~1사이로 조정
+
+        ### frequency를 이미지로 나타내면 4분면에 대칭적으로 나타나므로 
+        ### 4분면 중 하나에 이미지를 대응시키기 위해 row와 column을 2배씩 늘려줌
+        ### 이미지 복원 시 aliasing 발생을 막도록 하는 것임(이미지 깨지는 것 방지)
+        ### to prevent aliasing, row and columns multipies 2
+        M = 2*rows + 1
+        N = 2*cols + 1
+
+        ### gaussian mask with sigma = 10
+        sigma = 10
+        (X, Y) = np.meshgrid(np.linspace(0, N-1, N), np.linspace(0, M-1, M)) # 0~N-1(과 M-1) 까지 1 단위로 space 생성
+        Xc = np.ceil(N/2) # 올림
+        Yc = np.ceil(M/2)
+        gaussianNumerator = (X - Xc)**2 + (Y - Yc)**2 # gaussian 분자
+
+        ### low pass filter, high pass filter 
+        LPF = np.exp(-gaussianNumerator / (2* (sigma**2)))
+        HPF = 1 - LPF
+
+        ### LPF와 HPF 모두 0이 가운데로 오도록 IFFT 
+        ### frequency를 각 귀퉁이로 모아 줌
+        LPF_shift = np.fft.ifftshift(LPF.copy())
+        HPF_shift = np.fft.ifftshift(HPF.copy())
+
+        ### Log를 취한 이미지에 FFT를 적용해서 LPF와 HPF를 곱하여 Low Frequency성분과 High Frequency 성분 분리
+        img_FFT = np.fft.fft2(imgLog.copy(), (M, N))
+        img_LF = np.real(np.fft.ifft2(img_FFT.copy() * LPF_shift, (M, N)))
+        img_HF = np.real(np.fft.ifft2(img_FFT.copy() * HPF_shift, (M, N)))
+        
+        ### 각 LF, HF 성분에 scaling factor(gamma)를 곱하여 조명값과 반사값을 조절
+        img_adjust = gamma1*img_LF[0:rows, 0:cols] + gamma2*img_HF[0:rows, 0:cols]
+
+        ### 조정된 데이터를 이제 exp 연산을 통해 원래 형태의 이미지로 생성
+        img_exp = np.expm1(img_adjust) # exp(x) + 1
+        img_exp = (img_exp - np.min(img_exp)) / (np.max(img_exp) - np.min(img_exp)) # 0 ~ 1사이 정규화
+        img_out = np.array(255 * img_exp, dtype = 'uint8') # 255를 곱해서 intensity값을 만들어줌
+
+        ## pixel 값 50 미만은 white로 변환
+        img_out2 = (img_out < 50)
+        img_out = 255*img_out2.astype("uint8")        
 
 
+        ## YUV의 Y space를 filtering된 이미지로 교체해주고 RGB로 변환
+        img_YUV[:,:,0] = img_out
+        rgb_img = cv2.cvtColor(img_YUV, cv2.COLOR_YUV2BGR)
+        
+        if white == True:
+            _, rgb_img = cv2.pencilSketch(rgb_img, sigma_s=60, sigma_r=0.05, shade_factor=0.02)
+            
+        ## image intensity normalization
+        gray = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2GRAY)   
+        result = np.array(255 * (gray / 255) ** power, dtype = 'uint8')
+        
+        return result
+    
+    def edge_detection(self, image):
+        # gaussian bluring
+        blur = cv2.GaussianBlur(image, (5,5), 0)
+        
+        # canny
+        canny = cv2.Canny(blur, 0, 255)
+        
+        ## closed 연산 = 팽창(dilate) 후 침식(erode)
+        ## closed 연산하는 이유 : contour(closed curve)를 찾기 위해 edge를 더욱 선명하게 하기 위함
+        # 침식(erode) : object의 테두리를 깎는 효과
+        # 팽창(dilate) : 이미지의 모든 픽셀을 스캔하면서 구조적인 요소와 하나의 픽셀이라도 일치할 때 픽셀에 마킹
+        # 구조적 요소 : 원본 이미지에 적용되는 커널(Kernel)로, 커널이 image 내의 sub pixel에 하나라도 canny edge를 딴 것이 있으면 커널 내 모든 픽셀을 색칠해버림
+        dilate_img = cv2.dilate(canny, (3,3), iterations=2)
+        edged = cv2.erode(dilate_img, (3,3), iterations=2)
+        
+        return edged
+    
+    def preprocess(self, image, edged):
+        (cnts, _) = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
 
+        for i in cnts:
+            peri = cv2.arcLength(i, True)  # contour가 그리는 길이 반환
+            approx = cv2.approxPolyDP(i, 0.02 * peri, True)  # 길이에 2% 정도 오차를 둔다
+            print('arclength', peri)
+            print(len(approx))
+            if len(approx) == 4:  # 도형을 근사해서 외곽의 꼭짓점이 4개라면 명암의 외곽으로 설정
+                screenCnt = approx
+                size = len(screenCnt)
+                
+            if len(approx) == 4: # 근사한 꼭짓점이 4개면 중지
+                break
+            
+        pts = []    
+            
+        if approx.shape[0] == 4 :
+            pts = approx.reshape(4,2) # N * 1 * 2 -> 4 * 2
+
+        for x,y in pts:
+            cv2.circle(image, (x, y), 5, (0, 255, 0), -1)
+
+        sm = pts.sum(axis=1)                 # 4쌍의 좌표 각각 x+y 계산
+        diff = np.diff(pts, axis = 1)       # 4쌍의 좌표 각각 x-y 계산
+
+        topLeft = pts[np.argmin(sm)]         # x+y가 가장 값이 좌상단
+        bottomRight = pts[np.argmax(sm)]     # x+y가 가장 큰 값이 우하단
+        topRight = pts[np.argmin(diff)]     # x-y가 가장 작은 것이 우상단
+        bottomLeft = pts[np.argmax(diff)] 
+
+        pts1 = np.float32([topLeft, topRight, bottomRight, bottomLeft])
+
+        # 변환 후 영상에 사용할 폭과 높이 계산
+        w1 = abs(bottomRight[0] - bottomLeft[0]) # 상단 폭
+        w2 = abs(topRight[0] - topLeft[0]) # 하단 폭
+        h1 = abs(topRight[1] - bottomRight[1]) # 우측 높이
+        h2 = abs(topLeft[1] - bottomLeft[1]) # 좌측 높이
+        width = max([w1,w2]) # 폭
+        height = max([h1,h2]) # 높이
+
+        # 변환 후 4개의 좌표
+        pts2 = np.float32([[0,0],[width-1,0],[width-1,height-1],[0,height-1]])
+
+        # 변환 행렬 계산
+        mtrx = cv2.getPerspectiveTransform(pts1, pts2)
+
+        # Perspective transformation 적용
+        result = cv2.warpPerspective(image, mtrx, (width, height))
+
+        return result
+        
+        
