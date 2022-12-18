@@ -15,11 +15,8 @@ class LoRa:
         
         self.node = HSLR(serial_num=self.SERIAL_NUMBER, freq=self.FREQUENCY, addr=self.ADDRESS, power=self.POWER, rssi=self.RSSI)
         
+    # Function for sending First image to pi2
     def sendImage(self, imageBytes, width, height):
-        # imageBytes = bytearray()
-        
-        # for i in range(0, 2300):
-        #     imageBytes += b'\x01'
                 
         print(imageBytes)
         print("Image size : " + str(len(imageBytes)) + ", " + str(len(imageBytes)/1024) +"KB")
@@ -35,6 +32,7 @@ class LoRa:
         
         self.node.set(self.node.FREQUENCY, self.node.addr_temp, self.node.POWER, self.node.RSSI)
     
+    # Function for sending coordinate to pi2
     def sendCoordinate(self, coordinate):
         
         print("coordinate : " + str(coordinate))
@@ -54,23 +52,14 @@ class LoRa:
         self.node.transmitCoordinate(payload)        
 
         self.node.set(self.node.FREQUENCY, self.node.addr_temp, self.node.POWER, self.node.RSSI)
-
-
-    def getImage(self):
-        
-        while True:
-            imageBytes = self.node.receiveImage()
-            
-            if imageBytes != None:
-                break
-        
-        return imageBytes
     
+    # Function for getting packing from pi2
     def getPacket(self):
         # can receive only
-        # 1. {sound: True}
-        # 2. {start: True}
+        # 1. {sound: 1}
+        # 2. {start: 1}
 
+        # get payload
         payload = self.node.receivePacket()
         
         if payload != None:

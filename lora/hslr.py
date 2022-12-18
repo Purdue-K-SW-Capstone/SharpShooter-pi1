@@ -1,9 +1,6 @@
 import RPi.GPIO as GPIO
 import serial
 import time
-# from util import *
-
-# from sx126x import sx126x
 
 # This Mac Address : e4:5f:01:da:ab:78
 # Opposite Mac Address : e4:5f:01:da:aa:c8
@@ -315,7 +312,7 @@ class HSLR:
             print("receive rssi value fail")
             # print("receive rssi value fail: ",re_temp)
         
-    # send Image by LoRa
+    # send image using LoRa to pi1
     def transmitImage(self, imageBytes, width, height):
         GPIO.output(self.M1,GPIO.LOW)
         GPIO.output(self.M0,GPIO.LOW)
@@ -358,12 +355,6 @@ class HSLR:
             payload = self.receiveBvackPacket()
             print("BVACK list : " + str(payload))
             
-            # when error occrued
-            # NOTE : 고쳐야됨. 마지막 BVACK 패킷은 길이가 10이 안될수도...
-            # if len(payload) != 10:
-            #     print("BVACK packet's length is too short")
-            #     exit()
-            
             bvackArray = []
             # check lost packets in BVACK packet
             for i in range(0, self.BVACK_LENGTH):
@@ -376,6 +367,7 @@ class HSLR:
             print(bvackArray)
             print("len bvackarr : " + str(len(bvackArray)))
             
+            # if sending is finished, do four-way handshake
             if self.maxSequenceNumber < self.sequenceNumber and len(bvackArray) == 0:
                 self.fourHandShake()
             
@@ -390,7 +382,8 @@ class HSLR:
             print(payload)
                         
             return payload
-            
+    
+    # receive BVACK packet from pi2
     def receiveBvackPacket(self):
         while True:
             if self.ser.inWaiting() > 0:
@@ -409,66 +402,8 @@ class HSLR:
                 self.BVACK_INDEX = bvackList
 
                 return bvackList
-
-    def receiveDataPacket(self):
-        imageBytes = bytearray()
-        
-        while True:
-            if self.ser.inWaiting() > 0:
-                time.sleep(0.5)
-                r_buff = self.ser.read(self.ser.inWaiting())
-                packet = r_buff[:-1]
-                
-                # check the packet and get payload
-                payload = self.parse(packet=packet)
-                
-                # if BVACK_INDEX is full, send BVACK Packet
-                if len(self.BVACK_INDEX) >= 10:
-                    self.transmitBvack(self.BVACK_INDEX)
-                    
-        if self.ser.inWaiting() > 0:
-            time.sleep(0.5)
-            r_buff = self.ser.read(self.ser.inWaiting())
-            packet = r_buff[:-1]
-        
-            # check Checksum
-            packet = self.check(packet)
-            
-            payload = bytearray()
-            imageBytes = bytearray()
-            imageLength = 0
-            
-            # if packet is not None, get first Packet
-            if packet != None:
-                payload = packet[self.HEADER_SIZE:]
-                # get the image size from first packet
-                imageLength = int.from_bytes(payload[:4])
-                print("imageLength : " + str(imageLength))
-                imageBytes += payload
-        
-            # get other packets
-            while (len(packet) < 240) or (len(imageBytes) < imageLength):
-                # time.sleep(0.5)
-                if self.ser.inWaiting() > 0:
-                    time.sleep(0.5)
-                    packet = self.ser.read(self.ser.inWaiting())[:-1]
-                    
-                    # check Checksum
-                    packet = self.check(packet)
-                    
-                    # if packet is strange, continue
-                    if packet == None:
-                        print("add BVACK")
-                        continue
-                    
-                    payload = packet[self.HEADER_SIZE:]
-                    print(payload)
-                    imageBytes += payload
-                    
-                    print(str(len(imageBytes)) + " / " + str(imageLength))
-            
-            return imageBytes
     
+    # four-way handshake to finish communication
     def fourHandShake(self):
         self.transmitFin()
         print("FIN packet sent and sequence number is " + str(self.sequenceNumber-1))
@@ -522,7 +457,6 @@ class HSLR:
         # set checksum into header
         header[self.CHECKSUM_INDEX:self.HEADER_SIZE] = checkSum
         
-        
         t = int.from_bytes(flag, 'big')
         flagName = "TEMP"
         if t == 1:
@@ -545,6 +479,7 @@ class HSLR:
         
         return header + payload
     
+    # calculate checksum to compare with received checksum and calculated checksum.
     def calCheckSum(self, header, payload):
         tempPacket = header + payload
         
@@ -555,11 +490,7 @@ class HSLR:
             if len(sum) > 16:
                 sum = int(sum[1:], 2) + 1
             else:
-                sum = int(sum, 2)
-            
-        
-        
-        # dataSum = sum.to_bytes(2, 'big')
+                sum = int(sum, 2)        
         
         # one's complement
         checkSum = bin(0b1111111111111111 - sum)[2:]
@@ -568,7 +499,7 @@ class HSLR:
         
         return checkSum
         
-        
+    # check the checksum to compare with received checksum and calculated checksum.
     def check(self, packet):
 
         checkSum = packet[self.CHECKSUM_INDEX:self.HEADER_SIZE]
@@ -576,34 +507,11 @@ class HSLR:
         sum = 0
         
         calculatedCheckSum = self.calCheckSum(packet[:self.CHECKSUM_INDEX], packet[self.HEADER_SIZE:])
-        
-        # for i in range(0, 10, 2):
-        #     int_val = int.from_bytes(packet[i:i+2], 'big')
-        #     sum = bin(sum + int_val)[2:]
-        #     if len(sum) > 16:
-        #         sum = int(sum[1:], 2) + 1
-        #     else:
-        #         sum = int(sum, 2)            
-        
-        # for i in range(12, len(packet), 2):
-        #     int_val = int.from_bytes(packet[i:i+2], 'big')
-        #     sum = bin(sum + int_val)[2:]
-        #     if len(sum) > 16:
-        #         sum = int(sum[1:], 2) + 1
-        #     else:
-        #         sum = int(sum, 2)
-                                
-        # if checkSum is equal each ohter, return the packet
-        # if sum.to_bytes(2, 'big') == bytes(checkSum):
-        #     return True
-        # else:
-        #     return False
 
         if calculatedCheckSum == bytes(checkSum):
             return True
         else:
             return False
-
 
     # check an integrity and remove header of the packet
     def parse(self, packet):
@@ -638,51 +546,11 @@ class HSLR:
         # if flag is DATA, put sequence number into the BVACK_INDEX
         if flag == self.DATA:
             self.BVACK_INDEX += packet[self.SEQUENCE_NUMBER_INDEX:self.FLAG_INDEX]
-        
-        
-        # if flag == self.DATA:
-        #     self.FLAG = self.DATA
-        # elif flag == self.BVACK:
-        #     self.FALG = self.BVACK
-        #     self.BVACK_INDEX = []
-            
-        #     # check BVACK packet (0 is ignored)
-        #     for i in range(0, self.BVACK_LENGTH, self.BVACK_ELEMENT_SIZE):
-        #         element = int.from_bytes(payload[i:i+self.BVACK_ELEMENT_SIZE], 'big')
-        #         self.BVACK_INDEX.append(element)
-            
-        #     # snedData
-        # elif flag == self.SYN:
-        #     self.FALG = self.SYN
-        #     # save the image size and width, height
-        #     self.imageSize = payload[:self.IMAGE_SIZE_INDEX_END]
-        #     self.imageWidth = payload[self.IMAGE_SIZE_INDEX_END:self.IMAGE_WIDTH_INDEX_END]
-        #     self.imageHeight = payload[self.IMAGE_WIDTH_INDEX_END:self.IMAGE_HEIGHT_INDEX_END]
-        # elif flag == self.ACK:
-        #     if self.FLAG == self.SYN:
-        #         # send Data
-        #     elif self.FLAG = self.FIN:
-        #         # send ACK
-            
-        #     self.FLAG = self.ACK
-
-        # elif flag == self.FIN:
-        #     self.FALG = self.FIN
-            
-        # # remove RBVACK and ... just resend BVACK
-
-        # else:
-        #     self.FLAG = 0
-        #     print("flag is incorrect")
-        #     return []
-        
+                
         return payload
 
     # transmit SYN packet and waiting SYNACK packet
     def transmitSyn(self, imageSize, width, height):
-        # GPIO.output(self.M1,GPIO.LOW)
-        # GPIO.output(self.M0,GPIO.LOW)
-        # time.sleep(0.1)
                 
         self.sequenceNumber = 0
         
@@ -726,17 +594,7 @@ class HSLR:
                 else:
                     print("something wrong")
                     exit()
-                    
-    def transmitSYNACK(self):
-        
-        # add Header with SYNACK FLAG
-        packet = self.addHeader(sequenceNum=0, flag=self.SYNACK)
-        
-        # send packet
-        self.ser.write(packet)
-        
-        time.sleep(0.5)
-        
+    
     # for sending and resending DATA packet
     def transmitData(self, payload, sequenceNum):
         
@@ -752,11 +610,8 @@ class HSLR:
         
         time.sleep(1)
 
+    # transmit ACK packet
     def transmitAck(self):
-        # GPIO.output(self.M1,GPIO.LOW)
-        # GPIO.output(self.M0,GPIO.LOW)
-        # time.sleep(0.1)
-        
         # add Header with ACK FLAG
         packet = self.addHeader(sequenceNum=0, flag=self.ACK)
     
@@ -765,27 +620,8 @@ class HSLR:
         
         time.sleep(0.5)
     
-    def transmitBvack(self, payload):
-        # GPIO.output(self.M1,GPIO.LOW)
-        # GPIO.output(self.M0,GPIO.LOW)
-        # time.sleep(0.1)
-        
-        # add Header with ACK FLAG
-        packet = self.addHeader(sequenceNum=0, flag=self.BVACK, payload=payload)
-    
-        # sequenceNumber + 1
-        # self.sequenceNumber+=1
-        
-        # send packet
-        self.ser.write(packet)        
-        
-        time.sleep(0.5)
-        
+    # transmit FIN packet
     def transmitFin(self):
-        # GPIO.output(self.M1,GPIO.LOW)
-        # GPIO.output(self.M0,GPIO.LOW)
-        # time.sleep(0.1)
-        
         # add Header with ACK FLAG
         packet = self.addHeader(sequenceNum=0, flag=self.FIN)
         
@@ -796,6 +632,7 @@ class HSLR:
         
         time.sleep(0.5)
 
+    # transmit coordinate
     def transmitCoordinate(self, payload):
         GPIO.output(self.M1,GPIO.LOW)
         GPIO.output(self.M0,GPIO.LOW)

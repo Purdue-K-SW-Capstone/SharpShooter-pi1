@@ -27,14 +27,7 @@ class Cam:
         
         # take a first capture
         self.before = self.frame
-        # self.img = self.homomorphic_filtering(self.frame, 0.5, 15.0, 25)#, True)
-
-        #self.img = self.homomorphic_filtering(self.frame, .9, 3.5,3)#, True)
-        # cv2.imwrite('/home/ksw-user/morphic.jpg', self.img)
-        # self.edged = self.edge_detection(self.img)
-        # self.frame = self.preprocess(self.frame, self.edged)
-        # cv2.imwrite('/home/ksw-user/edged.jpg', self.edged)
-        
+    
         self.frame = self.removeBackGround(self.frame)
         
         height, width = self.frame.shape
@@ -255,19 +248,6 @@ class Cam:
             exit()
 
         return self.after
-
-        ## YUV의 Y space를 filtering된 이미지로 교체해주고 RGB로 변환
-        img_YUV[:,:,0] = img_out
-        rgb_img = cv2.cvtColor(img_YUV, cv2.COLOR_YUV2BGR)
-        
-        if white == True:
-            _, rgb_img = cv2.pencilSketch(rgb_img, sigma_s=60, sigma_r=0.05, shade_factor=0.02)
-            
-        ## image intensity normalization
-        gray = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2GRAY)   
-        result = np.array(255 * (gray / 255) ** power, dtype = 'uint8')
-        
-        return result
     
     def edge_detection(self, image):
         # gaussian bluring
@@ -276,11 +256,7 @@ class Cam:
         # canny
         canny = cv2.Canny(blur, 0, 255)
         
-        ## closed 연산 = 팽창(dilate) 후 침식(erode)
-        ## closed 연산하는 이유 : contour(closed curve)를 찾기 위해 edge를 더욱 선명하게 하기 위함
-        # 침식(erode) : object의 테두리를 깎는 효과
-        # 팽창(dilate) : 이미지의 모든 픽셀을 스캔하면서 구조적인 요소와 하나의 픽셀이라도 일치할 때 픽셀에 마킹
-        # 구조적 요소 : 원본 이미지에 적용되는 커널(Kernel)로, 커널이 image 내의 sub pixel에 하나라도 canny edge를 딴 것이 있으면 커널 내 모든 픽셀을 색칠해버림
+        ## closed operation = dilate and erode(to get closed curve)
         dilate_img = cv2.dilate(canny, (3,3), iterations=2)
         edged = cv2.erode(dilate_img, (3,3), iterations=2)
         
@@ -291,15 +267,13 @@ class Cam:
         cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
 
         for i in cnts:
-            peri = cv2.arcLength(i, True)  # contour가 그리는 길이 반환
-            approx = cv2.approxPolyDP(i, 0.02 * peri, True)  # 길이에 2% 정도 오차를 둔다
-            print('arclength', peri)
-            print(len(approx))
-            if len(approx) == 4:  # 도형을 근사해서 외곽의 꼭짓점이 4개라면 명암의 외곽으로 설정
+            peri = cv2.arcLength(i, True)  
+            approx = cv2.approxPolyDP(i, 0.02 * peri, True)  
+            if len(approx) == 4: 
                 screenCnt = approx
                 size = len(screenCnt)
                 
-            if len(approx) == 4: # 근사한 꼭짓점이 4개면 중지
+            if len(approx) == 4: 
                 break
             
         pts = []    
@@ -310,31 +284,31 @@ class Cam:
         for x,y in pts:
             cv2.circle(image, (x, y), 5, (0, 255, 0), -1)
 
-        sm = pts.sum(axis=1)                 # 4쌍의 좌표 각각 x+y 계산
-        diff = np.diff(pts, axis = 1)       # 4쌍의 좌표 각각 x-y 계산
+        # 4 coordinates x and y calculation
+        sm = pts.sum(axis=1)                 
+        diff = np.diff(pts, axis = 1)       
 
-        topLeft = pts[np.argmin(sm)]         # x+y가 가장 값이 좌상단
-        bottomRight = pts[np.argmax(sm)]     # x+y가 가장 큰 값이 우하단
-        topRight = pts[np.argmin(diff)]     # x-y가 가장 작은 것이 우상단
+        topLeft = pts[np.argmin(sm)]        
+        bottomRight = pts[np.argmax(sm)]   
+        topRight = pts[np.argmin(diff)]    
         bottomLeft = pts[np.argmax(diff)] 
 
         pts1 = np.float32([topLeft, topRight, bottomRight, bottomLeft])
 
-        # 변환 후 영상에 사용할 폭과 높이 계산
-        w1 = abs(bottomRight[0] - bottomLeft[0]) # 상단 폭
-        w2 = abs(topRight[0] - topLeft[0]) # 하단 폭
-        h1 = abs(topRight[1] - bottomRight[1]) # 우측 높이
-        h2 = abs(topLeft[1] - bottomLeft[1]) # 좌측 높이
-        width = max([w1,w2]) # 폭
-        height = max([h1,h2]) # 높이
+        # perspective transformation width and height
+        w1 = abs(bottomRight[0] - bottomLeft[0]) 
+        w2 = abs(topRight[0] - topLeft[0]) 
+        h1 = abs(topRight[1] - bottomRight[1]) 
+        h2 = abs(topLeft[1] - bottomLeft[1]) 
+        width = max([w1,w2]) 
+        height = max([h1,h2])
 
-        # 변환 후 4개의 좌표
+        # 4 coordinates after the perspective transformation
         pts2 = np.float32([[0,0],[width-1,0],[width-1,height-1],[0,height-1]])
 
-        # 변환 행렬 계산
         mtrx = cv2.getPerspectiveTransform(pts1, pts2)
 
-        # Perspective transformation 적용
+        # apply Perspective transformation
         result = cv2.warpPerspective(image, mtrx, (width, height))
 
         return result
